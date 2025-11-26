@@ -5,10 +5,8 @@ Author: Alessio Bolla
 
 import os
 import sys
-import warnings
 import pandas as pd
 import numpy as np
-from datetime import datetime
 
 def setup_kaggle_credentials():
     """
