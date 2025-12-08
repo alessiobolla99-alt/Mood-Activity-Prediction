@@ -1,0 +1,17 @@
+name: mood-prediction
+channels:
+  - defaults
+  - conda-forge
+dependencies:
+  - python=3.11
+  - pandas
+  - numpy
+  - scikit-learn
+  - xgboost
+  - matplotlib
+  - seaborn
+  - joblib
+  - pip
+  - pip:
+    - kaggle
+    - shap
