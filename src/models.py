@@ -16,11 +16,8 @@ from xgboost import XGBClassifier
 
 warnings.filterwarnings('ignore')
 
-# Global random seed for reproducibility
 RANDOM_STATE = 42
-
-# Flag to enable/disable hyperparameter tuning
-TUNE_HYPERPARAMETERS = True
+TUNE_HYPERPARAMETERS = True  # Set to False to skip hyperparameter tuning
 
 
 def load_processed_data(data_path="data/processed/processed_data.csv"):
@@ -49,7 +46,6 @@ def load_processed_data(data_path="data/processed/processed_data.csv"):
 def temporal_train_test_split(df, test_size=0.2):
     """
     Split data temporally: train on past, test on future.
-    This ensures no data leakage from future to past.
     
     Args:
         df: Dataset with date_parsed column
@@ -61,19 +57,17 @@ def temporal_train_test_split(df, test_size=0.2):
     print("\nSplitting data temporally:")
     
     if 'date_parsed' in df.columns:
-        # Convert date_parsed to datetime if needed
         df['date_parsed'] = pd.to_datetime(df['date_parsed'])
         df = df.sort_values('date_parsed').reset_index(drop=True)
         
-        # Calculate split index
+        # 80% train, 20% test based on time
         split_idx = int(len(df) * (1 - test_size))
         split_date = df.iloc[split_idx]['date_parsed']
         
         print(f"  Split date: {split_date.date()}")
-        print(f"  Train: {split_idx:,} samples (before {split_date.date()})")
-        print(f"  Test: {len(df) - split_idx:,} samples (from {split_date.date()})")
+        print(f"  Train: {split_idx:,} samples")
+        print(f"  Test: {len(df) - split_idx:,} samples")
         
-        # Split data
         train_df = df.iloc[:split_idx]
         test_df = df.iloc[split_idx:]
         
@@ -86,7 +80,7 @@ def temporal_train_test_split(df, test_size=0.2):
         y_test = test_df['target']
         
     else:
-        print("  Warning: No date_parsed column found, using random split")
+        print("  Warning: No date_parsed column, using random split")
         from sklearn.model_selection import train_test_split
         
         feature_cols = [col for col in df.columns if col != 'target']
@@ -98,15 +92,13 @@ def temporal_train_test_split(df, test_size=0.2):
         )
     
     print(f"  Features: {len(feature_cols)}")
-    print(f"  Train shape: {X_train.shape}")
-    print(f"  Test shape: {X_test.shape}")
     
     return X_train, X_test, y_train, y_test
 
 
 def get_models():
     """
-    Define the models to train with conservative parameters to reduce overfitting.
+    Define models with conservative parameters to reduce overfitting.
     
     Returns:
         dict: Dictionary of model name -> model instance
@@ -114,20 +106,20 @@ def get_models():
     models = {
         'RandomForest': RandomForestClassifier(
             n_estimators=100,
-            max_depth=5,
+            max_depth=5,              # Shallow trees to reduce overfitting
             min_samples_split=10,
-            min_samples_leaf=5,
-            max_features='sqrt',
+            min_samples_leaf=5,       # More samples per leaf
+            max_features='sqrt',      # Subset of features per split
             random_state=RANDOM_STATE,
             n_jobs=-1
         ),
         'GradientBoosting': GradientBoostingClassifier(
             n_estimators=100,
-            max_depth=3,
-            learning_rate=0.05,
+            max_depth=3,              # Very shallow trees
+            learning_rate=0.05,       # Slow learning
             min_samples_split=10,
             min_samples_leaf=5,
-            subsample=0.8,
+            subsample=0.8,            # 80% of data per tree
             random_state=RANDOM_STATE
         ),
         'XGBoost': XGBClassifier(
@@ -136,9 +128,9 @@ def get_models():
             learning_rate=0.05,
             min_child_weight=5,
             subsample=0.8,
-            colsample_bytree=0.8,
-            reg_alpha=1,
-            reg_lambda=2,
+            colsample_bytree=0.8,     # 80% of features per tree
+            reg_alpha=1,              # L1 regularization
+            reg_lambda=2,             # L2 regularization
             random_state=RANDOM_STATE,
             n_jobs=-1,
             eval_metric='mlogloss'
@@ -150,7 +142,7 @@ def get_models():
 
 def get_param_grids():
     """
-    Define hyperparameter search spaces for each model.
+    Define hyperparameter search spaces.
     
     Returns:
         dict: Dictionary of model name -> parameter grid
@@ -158,7 +150,7 @@ def get_param_grids():
     param_grids = {
         'RandomForest': {
             'n_estimators': [50, 100, 200],
-            'max_depth': [3, 5, 7, 10],
+            'max_depth': [3, 5, 7],
             'min_samples_split': [5, 10, 20],
             'min_samples_leaf': [2, 5, 10]
         },
@@ -166,7 +158,6 @@ def get_param_grids():
             'n_estimators': [50, 100, 200],
             'max_depth': [3, 5, 7],
             'learning_rate': [0.01, 0.05, 0.1],
-            'min_samples_split': [5, 10, 20],
             'min_samples_leaf': [2, 5, 10]
         },
         'XGBoost': {
@@ -199,7 +190,7 @@ def tune_hyperparameters(X_train, y_train, models_dir="models", n_iter=20):
     
     os.makedirs(models_dir, exist_ok=True)
     
-    # Use TimeSeriesSplit for temporal data
+    # TimeSeriesSplit preserves temporal order
     tscv = TimeSeriesSplit(n_splits=5)
     
     base_models = {
@@ -215,12 +206,13 @@ def tune_hyperparameters(X_train, y_train, models_dir="models", n_iter=20):
     for name, model in base_models.items():
         print(f"\n  {name}:")
         
+        # RandomizedSearchCV is faster than GridSearchCV
         search = RandomizedSearchCV(
             model,
             param_grids[name],
             n_iter=n_iter,
             cv=tscv,
-            scoring='balanced_accuracy',
+            scoring='balanced_accuracy',  # Better for imbalanced classes
             random_state=RANDOM_STATE,
             n_jobs=-1
         )
@@ -233,7 +225,6 @@ def tune_hyperparameters(X_train, y_train, models_dir="models", n_iter=20):
         print(f"    Best score: {search.best_score_:.3f}")
         print(f"    Best params: {search.best_params_}")
     
-    # Save best parameters
     params_path = os.path.join(models_dir, "best_params.pkl")
     joblib.dump(best_params, params_path)
     print(f"\nBest parameters saved to {params_path}")
@@ -244,7 +235,6 @@ def tune_hyperparameters(X_train, y_train, models_dir="models", n_iter=20):
 def compute_learning_curves(X_train, y_train, models_dir="models"):
     """
     Compute learning curves for all models.
-    Learning curves show train/validation score as training set size increases.
     
     Args:
         X_train: Training features
@@ -260,13 +250,12 @@ def compute_learning_curves(X_train, y_train, models_dir="models"):
     models = get_models()
     learning_curves_data = {}
     
-    # Define training set sizes (10% to 100%)
+    # 10 points from 10% to 100% of training data
     train_sizes = np.linspace(0.1, 1.0, 10)
     
     for name, model in models.items():
         print(f"\n  {name}:")
         
-        # Compute learning curve with 5-fold cross-validation
         train_sizes_abs, train_scores, val_scores = learning_curve(
             model,
             X_train,
@@ -278,7 +267,6 @@ def compute_learning_curves(X_train, y_train, models_dir="models"):
             random_state=RANDOM_STATE
         )
         
-        # Store results
         learning_curves_data[name] = {
             'train_sizes': train_sizes_abs,
             'train_scores_mean': train_scores.mean(axis=1),
@@ -287,11 +275,9 @@ def compute_learning_curves(X_train, y_train, models_dir="models"):
             'val_scores_std': val_scores.std(axis=1)
         }
         
-        print(f"    Train sizes: {train_sizes_abs[0]} -> {train_sizes_abs[-1]}")
-        print(f"    Final train score: {train_scores.mean(axis=1)[-1]:.3f} (+/- {train_scores.std(axis=1)[-1]:.3f})")
-        print(f"    Final val score: {val_scores.mean(axis=1)[-1]:.3f} (+/- {val_scores.std(axis=1)[-1]:.3f})")
+        print(f"    Final train score: {train_scores.mean(axis=1)[-1]:.3f}")
+        print(f"    Final val score: {val_scores.mean(axis=1)[-1]:.3f}")
     
-    # Save learning curves data
     lc_path = os.path.join(models_dir, "learning_curves.pkl")
     joblib.dump(learning_curves_data, lc_path)
     print(f"\nLearning curves saved to {lc_path}")
@@ -301,7 +287,7 @@ def compute_learning_curves(X_train, y_train, models_dir="models"):
 
 def train_models(X_train, y_train, X_test, y_test, tuned_models=None, models_dir="models"):
     """
-    Train all models and save them along with test data.
+    Train all models and save them.
     
     Args:
         X_train: Training features
@@ -318,7 +304,7 @@ def train_models(X_train, y_train, X_test, y_test, tuned_models=None, models_dir
     
     os.makedirs(models_dir, exist_ok=True)
     
-    # Use tuned models if provided, otherwise use default
+    # Use tuned models if available, otherwise default
     if tuned_models is not None:
         models = tuned_models
         print("  Using tuned hyperparameters")
@@ -331,27 +317,21 @@ def train_models(X_train, y_train, X_test, y_test, tuned_models=None, models_dir
     for name, model in models.items():
         print(f"\n  {name}:")
         
-        # Train model (skip if already fitted from tuning)
+        # Skip fitting if already fitted during tuning
         if not hasattr(model, 'n_features_in_'):
             model.fit(X_train, y_train)
         
         trained_models[name] = model
         
-        # Save model
         model_path = os.path.join(models_dir, f"{name.lower()}.pkl")
         joblib.dump(model, model_path)
         print(f"    Saved to {model_path}")
     
-    # Save test data for evaluation.py
-    test_data = {
-        'X_test': X_test,
-        'y_test': y_test
-    }
+    # Save test data for evaluate.py
+    test_data = {'X_test': X_test, 'y_test': y_test}
     test_path = os.path.join(models_dir, "test_data.pkl")
     joblib.dump(test_data, test_path)
     print(f"\nTest data saved to {test_path}")
-    
-    print(f"All models trained and saved to {models_dir}/")
     
     return trained_models
 
@@ -359,7 +339,6 @@ def train_models(X_train, y_train, X_test, y_test, tuned_models=None, models_dir
 def train(data_path="data/processed/processed_data.csv", models_dir="models"):
     """
     Main function to train all models.
-    Can be called from main.py or run standalone.
     
     Args:
         data_path: Path to processed data
@@ -370,21 +349,15 @@ def train(data_path="data/processed/processed_data.csv", models_dir="models"):
     """
     print("MODEL training:")
     
-    # Load data
     df = load_processed_data(data_path)
-    
-    # Temporal split
     X_train, X_test, y_train, y_test = temporal_train_test_split(df)
     
-    # Hyperparameter tuning (if enabled)
+    # Hyperparameter tuning (optional)
     tuned_models = None
     if TUNE_HYPERPARAMETERS:
         tuned_models = tune_hyperparameters(X_train, y_train, models_dir)
     
-    # Compute learning curves (with tuned or default models)
     compute_learning_curves(X_train, y_train, models_dir)
-    
-    # Train models
     trained_models = train_models(X_train, y_train, X_test, y_test, tuned_models, models_dir)
     
     print("\nModel training complete")
@@ -393,5 +366,4 @@ def train(data_path="data/processed/processed_data.csv", models_dir="models"):
 
 
 if __name__ == "__main__":
-    """Main execution function."""
     train()

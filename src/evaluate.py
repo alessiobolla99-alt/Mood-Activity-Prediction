@@ -176,10 +176,7 @@ def print_classification_reports(results, mood_mapping=None):
         results: Dictionary of model results
         mood_mapping: Optional mapping of class indices to mood names
     """
-    print("\n" + "=" * 60)
-    print("CLASSIFICATION REPORTS")
-    print("=" * 60)
-    
+    print("\nCLASSIFICATION REPORTS:\n")    
     # Get target names if mapping available
     if mood_mapping:
         target_names = [mood_mapping.get(str(i), str(i)) for i in sorted(mood_mapping.keys(), key=int)]
@@ -204,12 +201,10 @@ def print_summary(results):
     Args:
         results: Dictionary of model results
     """
-    print("\n" + "=" * 60)
-    print("MODEL COMPARISON SUMMARY")
-    print("=" * 60)
+    print("Models comparison summary")
     
     print(f"\n{'Model':<20} {'Accuracy':>10} {'Bal. Acc.':>10} {'F1 (macro)':>12} {'F1 (weighted)':>14}")
-    print("-" * 66)
+    print("-" * 70)
     
     best_model = None
     best_score = 0
@@ -223,10 +218,8 @@ def print_summary(results):
             best_score = metrics['balanced_accuracy']
             best_model = name
     
-    print("-" * 66)
+    print("-" * 70)
     print(f"\nBest model: {best_model} (Balanced Accuracy: {best_score:.3f})")
-    print("=" * 60)
-
 
 def plot_confusion_matrices(results, mood_mapping=None, results_dir="results"):
     """
