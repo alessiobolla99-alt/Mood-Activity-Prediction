@@ -24,14 +24,14 @@ This project develops an end-to-end predictive system that classifies daily mood
 | Model | Accuracy | Balanced Accuracy | F1 (macro) | F1 (weighted) |
 |-------|----------|-------------------|------------|---------------|
 | Random Forest | 0.926 | 0.732 | 0.728 | 0.912 |
-| **Gradient Boosting** ⭐ | **0.984** | **0.956** | **0.943** | **0.985** |
+| **Gradient Boosting** | **0.984** | **0.956** | **0.943** | **0.985** |
 | XGBoost | 0.979 | 0.916 | 0.932 | 0.979 |
 
 **Gradient Boosting achieved 95.6% balanced accuracy**, demonstrating strong performance on minority classes (Awful, Bad) — critical for mental health applications where detecting negative mood states is essential.
 
 ## Technical Report
 
-📄 **[Complete project report (PDF)](docs/ADP_AlessioBolla.pdf)**
+**[Complete project report (PDF)](docs/ADP_AlessioBolla.pdf)**
 
 ## Quick Start
 
@@ -108,58 +108,12 @@ python src/models.py        # Step 2: Model training
 python src/evaluate.py      # Step 3: Evaluation & plots
 ```
 
-## Project Structure
-
-```
-Mood-Activity-Prediction/
-│
-├── .github/
-│   └── workflows/
-│       └── main.yml              # CI/CD pipeline configuration
-│
-├── data/
-│   ├── raw/
-│   │   └── Daylio_Abid.csv       # Original dataset
-│   └── processed/
-│       ├── processed_data.csv    # Cleaned & featured dataset
-│       └── mood_mapping.json     # Label encoding mapping
-│
-├── docs/
-│   └── project_report.pdf        # Technical report
-│
-├── models/                       # Trained models (.pkl)
-│   ├── randomforest.pkl
-│   ├── gradientboosting.pkl
-│   ├── xgboost.pkl
-│   ├── best_params.pkl
-│   ├── learning_curves.pkl
-│   └── test_data.pkl
-│
-├── results/                      # Evaluation outputs
-│   ├── evaluation_results.csv
-│   ├── confusion_matrices.png
-│   ├── learning_curves.png
-│   ├── feature_importance.png
-│   └── shap_*.png
-│
-├── src/                          # Source code modules
-│   ├── __init__.py
-│   ├── prepare.py                # Data preprocessing & feature engineering
-│   ├── models.py                 # Model training & hyperparameter tuning
-│   └── evaluate.py               # Evaluation & visualization
-│
-├── environment.yml               # Conda dependencies
-├── main.py                       # Pipeline entry point
-├── PROPOSAL.md                   # Original project proposal
-└── README.md                     # This file
-```
-
 ## CI/CD Pipeline
 
 The project implements automated testing via **GitHub Actions**, executing the complete pipeline on every code push:
 
 1. **Environment setup:** Conda environment creation with all dependencies
-2. **Data preparation:** Dataset download (via Kaggle API with GitHub Secrets) and feature engineering
+2. **Data preparation:** Dataset download (via Kaggle API with GitHub Secrets) and pre-processing and feature engineering
 3. **Model training:** Training all three models with hyperparameter tuning
 4. **Evaluation:** Metrics computation, visualization generation
 5. **Results archival:** Automated storage of trained models and evaluation results
@@ -169,6 +123,10 @@ The project implements automated testing via **GitHub Actions**, executing the c
 For CI/CD to work, configure the following secrets in your repository:
 - `KAGGLE_USERNAME` — Your Kaggle username
 - `KAGGLE_KEY` — Your Kaggle API key
+
+### Kaggle local usage
+In order to run the code locally, you will need to obtain the json file, as specified in this section [https://www.kaggle.com/discussions/getting-started/524433](https://www.kaggle.com/discussions/getting-started/524433)
+so that you can authenticate yourself on Kaggle to download the dataset in question.
 
 ## Reproducibility
 
