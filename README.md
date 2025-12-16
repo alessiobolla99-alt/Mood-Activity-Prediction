@@ -31,7 +31,7 @@ This project develops an end-to-end predictive system that classifies daily mood
 
 ## Technical Report
 
-**[Complete project report (PDF)](docs/ADP_AlessioBolla.pdf)**
+**[Complete project report (PDF)](project_report.pdf)**
 
 ## Quick Start
 
