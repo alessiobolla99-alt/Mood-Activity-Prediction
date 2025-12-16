@@ -1,6 +1,6 @@
 """
 Model Training Script for Mood & Activity Prediction Project
-Author: Alessio Bolla
+Author: Alessio Bolla, , AI improved
 """
 
 import os
